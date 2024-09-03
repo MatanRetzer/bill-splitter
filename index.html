@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Splitter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: linear-gradient(to bottom right, #ffffff, #f0f0f0);
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 400px;
+        }
+        .card-header {
+            background-color: #3b82f6;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .card-header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .card-content {
+            padding: 20px;
+        }
+        .card-footer {
+            background-color: #e6f0ff;
+            padding: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .input-group i {
+            margin-right: 10px;
+            color: #3b82f6;
+            width: 20px;
+            text-align: center;
+        }
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+        .custom-amounts {
+            margin-top: 15px;
+        }
+        .custom-amount {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .custom-amount input {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        .result p {
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="card-header">
+            <h1><i class="fas fa-receipt"></i> Bill Splitter</h1>
+        </div>
+        <div class="card-content">
+            <div class="input-group">
+                <i class="fas fa-shekel-sign"></i>
+                <div>
+                    <label for="totalBill">Total Bill (₪)</label>
+                    <input type="number" id="totalBill" placeholder="Enter total bill amount">
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <i class="fas fa-users"></i>
+                <div>
+                    <label for="numFriends">Number of Friends</label>
+                    <input type="number" id="numFriends" value="2" min="2">
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <i class="fas fa-percentage"></i>
+                <div>
+                    <label for="tipPercentage">Tip Percentage: <span id="tipValue">15</span>%</label>
+                    <input type="range" id="tipPercentage" min="0" max="30" value="15">
+                </div>
+            </div>
+            
+            <div class="custom-amounts">
+                <button onclick="addCustomAmount()"><i class="fas fa-plus"></i> Add Custom Amount</button>
+                <div id="customAmountsContainer"></div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="result" id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        let customAmounts = [];
+
+        function addCustomAmount() {
+            const container = document.getElementById('customAmountsContainer');
+            const index = customAmounts.length;
+            
+            const div = document.createElement('div');
+            div.className = 'custom-amount';
+            div.innerHTML = `
+                <input type="text" placeholder="Name" onchange="updateCustomAmount(${index}, 'name', this.value)">
+                <input type="number" placeholder="Amount" onchange="updateCustomAmount(${index}, 'amount', this.value)">
+                <button onclick="removeCustomAmount(${index})"><i class="fas fa-minus"></i></button>
+            `;
+            
+            container.appendChild(div);
+            customAmounts.push({ name: '', amount: 0 });
+            calculateSplit();
+        }
+
+        function removeCustomAmount(index) {
+            customAmounts.splice(index, 1);
+            const container = document.getElementById('customAmountsContainer');
+            container.innerHTML = '';
+            customAmounts.forEach((_, i) => addCustomAmount());
+            calculateSplit();
+        }
+
+        function updateCustomAmount(index, field, value) {
+            customAmounts[index][field] = field === 'amount' ? parseFloat(value) || 0 : value;
+            calculateSplit();
+        }
+
+        function calculateSplit() {
+            const totalBill = parseFloat(document.getElementById('totalBill').value) || 0;
+            const numFriends = parseInt(document.getElementById('numFriends').value) || 2;
+            const tipPercentage = parseInt(document.getElementById('tipPercentage').value) || 0;
+
+            const totalCustomAmount = customAmounts.reduce((sum, ca) => sum + ca.amount, 0);
+            const remainingAmount = Math.max(0, totalBill - totalCustomAmount);
+            const tipAmount = (totalBill * tipPercentage) / 100;
+            const totalWithTip = totalBill + tipAmount;
+
+            const regularSplitCount = numFriends - customAmounts.length;
+            const splitAmount = regularSplitCount > 0 ? (remainingAmount / regularSplitCount) : 0;
+            const splitAmountWithTip = regularSplitCount > 0 ? 
+                ((remainingAmount + (remainingAmount / totalBill) * tipAmount) / regularSplitCount) : 0;
+
+            const resultHtml = `
+                <p><i class="fas fa-money-bill-wave"></i> <span>Total (inc. tip):</span> <strong>₪${totalWithTip.toFixed(2)}</strong></p>
+                <p><i class="fas fa-user"></i> <span>Split amount (before tip):</span> <strong>₪${splitAmount.toFixed(2)} per person</strong></p>
+                <p><i class="fas fa-user-plus"></i> <span>Split amount (with tip):</span> <strong>₪${splitAmountWithTip.toFixed(2)} per person</strong></p>
+                ${customAmounts.map(ca => {
+                    const amountWithTip = ca.amount + (ca.amount / totalBill) * tipAmount;
+                    return `<p><i class="fas fa-user-tag"></i> <span>${ca.name || 'Custom'}:</span> <strong>₪${amountWithTip.toFixed(2)}</strong></p>`;
+                }).join('')}
+            `;
+
+            document.getElementById('result').innerHTML = resultHtml;
+        }
+
+        // Add event listeners
+        document.getElementById('totalBill').addEventListener('input', calculateSplit);
+        document.getElementById('numFriends').addEventListener('input', calculateSplit);
+        document.getElementById('tipPercentage').addEventListener('input', function() {
+            document.getElementById('tipValue').textContent = this.value;
+            calculateSplit();
+        });
+
+        // Initial calculation
+        calculateSplit();
+    </script>
+</body>
+</html>
